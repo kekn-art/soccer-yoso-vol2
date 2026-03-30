@@ -34,7 +34,7 @@
 <body>
 
     <header>
-        <h1>⚽️ FOOTBALL PREDICTIONS</h1>
+        <h1>⚽️ FOOTBALL NOTE</h1>
     </header>
 
     <div id="rankingBox">
@@ -44,7 +44,7 @@
 
     <div class="container">
         <div class="input-box">
-            <label>👤 名前 </label>
+            <label>👤 名前 (「admin」で管理モード)</label>
             <input type="text" id="userName" placeholder="自分の名前" oninput="checkAdmin(this.value)">
 
             <div id="adminTools" class="admin-panel">
@@ -87,7 +87,7 @@
 
     <script>
         // あなたの新しいGASのURLをセットしました
- const ENDPOINT = "https://script.google.com/macros/s/AKfycbyHQbzAY0JNiMGe31ACbQMJ0IPtVWb7vNnis98LnfkKGzuMigNwRFyYLBx0G7ZaZV81bg/exec";
+        const ENDPOINT = "https://script.google.com/macros/s/AKfycbyHQbzAY0JNiMGe31ACbQMJ0IPtVWb7vNnis98LnfkKGzuMigNwRFyYLBx0G7ZaZV81bg/exec"; 
         let isAdmin = false;
         let predictions = [];
 
