@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Prediction Master</title>
+    <style>
+        body { margin: 0; padding: 0; background-color: #000; color: white; font-family: sans-serif; }
+        header { background-color: #111; padding: 20px; text-align: center; border-bottom: 2px solid #00d4ff; }
+        h1 { margin: 0; font-size: 1.2em; letter-spacing: 2px; }
+        #rankingBox { background: #001d3d; padding: 15px; border-radius: 12px; margin: 15px auto; border: 1px solid #003566; max-width: 500px; }
+        .container { padding: 15px; max-width: 500px; margin: auto; }
+        .input-box { background: #111; padding: 20px; border-radius: 12px; border: 1px solid #333; }
+        label { display: block; font-size: 0.8em; color: #00d4ff; margin-bottom: 5px; margin-top: 12px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 12px; background: #222; border: 1px solid #444; color: #fff; border-radius: 8px; box-sizing: border-box; font-size: 1em; }
+        .score-input-group { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+        .score-input-group input { text-align: center; font-size: 1.2em; font-weight: bold; }
+        .main-btn { margin-top: 20px; background: #00d4ff; color: #000; font-size: 1.1em; font-weight: bold; border: none; border-radius: 8px; padding: 15px; cursor: pointer; width: 100%; }
+        
+        /* 管理者パネル */
+        .admin-panel { background: #331a00; border: 1px dashed #ff9500; padding: 15px; border-radius: 8px; margin-top: 15px; display: none; }
+        .danger-btn { background: #d33; color: white; border: none; padding: 10px; border-radius: 5px; width: 100%; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        
+        .log-card { background: #1a1a1a; padding: 15px; border-radius: 10px; border-left: 4px solid #00d4ff; margin-bottom: 15px; position: relative; }
+        .judge-btn { font-size: 0.7em; padding: 8px; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; flex: 1; }
+        #loading { text-align: center; color: #00d4ff; font-size: 0.8em; margin-bottom: 10px; display: none; }
+        .pt-badge { background:#333; padding:2px 8px; border-radius:10px; font-size:0.8em; color:#ffc300; font-weight: bold;}
+        .match-display { font-size: 1.1em; font-weight: bold; margin: 10px 0; display: flex; justify-content: space-between; align-items: center; background: #222; padding: 10px; border-radius: 6px; }
+        .scorer-container { display: flex; gap: 10px; margin-top: 5px; }
+        .scorer-box { flex: 1; background: #252525; padding: 8px; border-radius: 5px; font-size: 0.8em; min-height: 40px; white-space: pre-wrap; line-height: 1.4; color: #ccc; }
+        .del-btn { position: absolute; top: 10px; right: 10px; background: #d33; color: white; border: none; border-radius: 4px; padding: 5px 8px; font-size: 0.7em; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>⚽️ FOOTBALL PREDICTIONS</h1>
+    </header>
+
+    <div id="rankingBox">
+        <h3 style="margin:0 0 10px 0; font-size:0.9em; color:#ffc300; text-align: center;">🥇 総合ランキング</h3>
+        <div id="rankingList" style="font-size: 0.9em; text-align: center; line-height: 1.8;">読み込み中...</div>
+    </div>
+
+    <div class="container">
+        <div class="input-box">
+            <label>👤 名前 </label>
+            <input type="text" id="userName" placeholder="自分の名前" oninput="checkAdmin(this.value)">
+
+            <div id="adminTools" class="admin-panel">
+                <button class="danger-btn" onclick="resetAllData()">💥 全データを完全リセット（初期化）</button>
+                <p style="color:#ff9500; font-size:0.7em; margin-top:8px; text-align:center;">※スプレッドシートの全予想が消去されます</p>
+            </div>
+
+            <label>🏟 対戦カード</label>
+            <div style="display: flex; gap: 5px; align-items: center;">
+                <input type="text" id="homeTeam" placeholder="HOME">
+                <span>vs</span>
+                <input type="text" id="awayTeam" placeholder="AWAY">
+            </div>
+
+            <label>🔢 スコア予想</label>
+            <div class="score-input-group">
+                <input type="number" id="homeScore" placeholder="0">
+                <span>-</span>
+                <input type="number" id="awayScore" placeholder="0">
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1;">
+                    <label>⚽️ HOME得点者</label>
+                    <textarea id="homeScorer" rows="2" style="width:100%; background:#222; color:#fff; border:1px solid #444; border-radius:8px; padding:10px; box-sizing:border-box;" placeholder="選手名..."></textarea>
+                </div>
+                <div style="flex: 1;">
+                    <label>⚽️ AWAY得点者</label>
+                    <textarea id="awayScorer" rows="2" style="width:100%; background:#222; color:#fff; border:1px solid #444; border-radius:8px; padding:10px; box-sizing:border-box;" placeholder="選手名..."></textarea>
+                </div>
+            </div>
+
+            <button class="main-btn" id="submitBtn" onclick="sendData()">予想を送信</button>
+        </div>
+
+        <hr style="border: 0.5px solid #333; margin: 30px 0;">
+        <div id="loading">📡 同期中...</div>
+        <div id="feedArea"></div>
+    </div>
+
+    <script>
+        // あなたの新しいGASのURLをセットしました
+        const ENDPOINT = "https://script.google.com/macros/s/AKfycbyHQbzAY0JNiMGe31ACbQMJ0IPtVWb7vNnis98LnfkKGzuMigNwRFyYLBx0G7ZaZV81bg/exec"; 
+        let isAdmin = false;
+        let predictions = [];
+
+        loadData();
+
+        function checkAdmin(val) {
+            const tools = document.getElementById('adminTools');
+            isAdmin = (val === "admin");
+            tools.style.display = isAdmin ? "block" : "none";
+            displayPredictions(); 
+        }
+
+        async function loadData() {
+            document.getElementById('loading').style.display = "block";
+            try {
+                const response = await fetch(ENDPOINT);
+                predictions = await response.json();
+                displayPredictions();
+            } catch (e) { console.error(e); }
+            document.getElementById('loading').style.display = "none";
+        }
+
+        // ★ 全データリセット機能
+        async function resetAllData() {
+            if(!confirm("【警告】すべての予想データを削除し、初期状態に戻します。本当によろしいですか？")) return;
+            document.getElementById('loading').style.display = "block";
+            try {
+                await fetch(ENDPOINT, {
+                    method: "POST",
+                    body: JSON.stringify({ method: 'update', id: 'all', deleted: true })
+                });
+                alert("リセットが完了しました！これでゴミデータも消えます。");
+                await loadData();
+            } catch (e) { alert("リセットに失敗しました。GASのコードが最新か確認してください。"); }
+        }
+
+        async function sendData() {
+            const name = document.getElementById('userName').value;
+            const homeT = document.getElementById('homeTeam').value || "HOME";
+            const awayT = document.getElementById('awayTeam').value || "AWAY";
+            const homeS = document.getElementById('homeScore').value || 0;
+            const awayS = document.getElementById('awayScore').value || 0;
+            const hScorer = document.getElementById('homeScorer').value;
+            const aScorer = document.getElementById('awayScorer').value;
+
+            if (!name) return alert("名前を入れてね！");
+
+            const id = Date.now();
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerText = "送信中...";
+
+            const combinedScorer = `H: ${hScorer || 'なし'}\n---\nA: ${aScorer || 'なし'}`;
+
+            try {
+                await fetch(ENDPOINT, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        method: 'add', id: id, name: name,
+                        match: `${homeT} vs ${awayT}`, score: `${homeS}-${awayS}`, scorer: combinedScorer
+                    })
+                });
+                saveMyId(id);
+                document.getElementById('homeTeam').value = "";
+                document.getElementById('awayTeam').value = "";
+                document.getElementById('homeScore').value = "";
+                document.getElementById('awayScore').value = "";
+                document.getElementById('homeScorer').value = "";
+                document.getElementById('awayScorer').value = "";
+                await loadData();
+            } catch (e) { alert("失敗しました"); }
+            btn.disabled = false;
+            btn.innerText = "予想を送信";
+        }
+
+        function saveMyId(id) {
+            let myIds = JSON.parse(localStorage.getItem('my_predictions') || "[]");
+            myIds.push(Number(id));
+            localStorage.setItem('my_predictions', JSON.stringify(myIds));
+        }
+
+        function isMine(id) {
+            let myIds = JSON.parse(localStorage.getItem('my_predictions') || "[]");
+            return myIds.includes(Number(id));
+        }
+
+        async function deleteData(id) {
+            if(!confirm("この投稿を削除しますか？")) return;
+            document.getElementById('loading').style.display = "block";
+            await fetch(ENDPOINT, {
+                method: "POST",
+                body: JSON.stringify({ method: 'update', id: id, deleted: true })
+            });
+            await loadData();
+        }
+
+        async function updatePoint(id, type, manualVal = null) {
+            const target = predictions.find(d => d.id == id);
+            if (!target) return;
+            if (type === 'score') target.scorePoints = (target.scorePoints == 5) ? 0 : 5;
+            else if (type === 'scorer') target.scorerPoints = (Number(target.scorerPoints) || 0) + 1;
+            else if (type === 'perfect') target.perfectBonus = (target.perfectBonus == 5) ? 0 : 5;
+            else if (type === 'reset') { target.scorePoints = 0; target.scorerPoints = 0; target.perfectBonus = 0; }
+            else if (type === 'manual') { target.scorePoints = Number(manualVal); target.scorerPoints = 0; target.perfectBonus = 0; }
+
+            document.getElementById('loading').style.display = "block";
+            await fetch(ENDPOINT, {
+                method: "POST",
+                body: JSON.stringify({
+                    method: 'update', id: id,
+                    scorePoints: target.scorePoints,
+                    scorerPoints: target.scorerPoints,
+                    perfectBonus: target.perfectBonus
+                })
+            });
+            await loadData();
+        }
+
+        function displayPredictions() {
+            const feed = document.getElementById('feedArea');
+            feed.innerHTML = "";
+            const ranking = {};
+            const displayList = [...predictions].reverse();
+
+            displayList.forEach(data => {
+                const sPt = Number(data.scorePoints) || 0;
+                const rPt = Number(data.scorerPoints) || 0;
+                const bPt = Number(data.perfectBonus) || 0;
+                const total = sPt + rPt + bPt;
+
+                if (!ranking[data.name]) ranking[data.name] = 0;
+                ranking[data.name] += total;
+
+                const scorerParts = data.scorer ? data.scorer.split('\n---\n') : ["なし", "なし"];
+                const hList = scorerParts[0] ? scorerParts[0].replace('H: ', '') : 'なし';
+                const aList = scorerParts[1] ? scorerParts[1].replace('A: ', '') : 'なし';
+
+                const canDelete = isMine(data.id) || isAdmin;
+
+                const card = `
+                    <div class="log-card" style="border-left-color: ${bPt > 0 ? '#ffc300' : (sPt > 0 ? '#0f0' : '#00d4ff')}">
+                        ${canDelete ? `<button class="del-btn" onclick="deleteData(${data.id})">🗑 削除</button>` : ''}
+                        
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                            <div style="color: #00d4ff; font-weight: bold; font-size:0.9em;">👤 ${data.name}</div>
+                            <div class="pt-badge">${total} pt</div>
+                        </div>
+                        
+                        <div class="match-display">
+                            <span style="flex:1;">${(data.match || "vs").split(' vs ')[0]}</span>
+                            <span style="color:#ffc300; font-size:1.2em; margin: 0 10px;">${data.score || '0-0'}</span>
+                            <span style="flex:1; text-align:right;">${(data.match || "vs").split(' vs ')[1]}</span>
+                        </div>
+
+                        <div class="scorer-container">
+                            <div class="scorer-box">${hList}</div>
+                            <div class="scorer-box" style="text-align:right;">${aList}</div>
+                        </div>
+                        
+                        <div style="display: ${isAdmin ? 'block' : 'none'}; margin-top:15px;">
+                            <div style="display:flex; gap:4px; margin-bottom:10px;">
+                                <button class="judge-btn" onclick="updatePoint(${data.id}, 'score')" style="background:#1a1;">スコア(+5)</button>
+                                <button class="judge-btn" onclick="updatePoint(${data.id}, 'scorer')" style="background:#0055ff;">得点者(+1)</button>
+                                <button class="judge-btn" onclick="updatePoint(${data.id}, 'perfect')" style="background:#ffc300; color:#000;">完全(+5)</button>
+                                <button class="judge-btn" onclick="updatePoint(${data.id}, 'reset')" style="background:#444;">リセ</button>
+                            </div>
+                            <div style="background:#442200; padding:10px; border-radius:6px; display:flex; gap:5px; align-items:center;">
+                                <input type="number" id="manual_pt_${data.id}" value="${total}" style="width:60px; background:#000; color:#fff; border:1px solid #ff9500; padding:5px; border-radius:4px;">
+                                <button onclick="updatePoint(${data.id}, 'manual', document.getElementById('manual_pt_${data.id}').value)" style="background:#ff9500; border:none; padding:5px 10px; border-radius:4px; cursor:pointer; font-weight:bold; color:#000; font-size:0.8em;">点数確定</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                feed.innerHTML += card;
+            });
+
+            const rankArea = document.getElementById('rankingList');
+            const sorted = Object.entries(ranking).sort((a, b) => b[1] - a[1]);
+            rankArea.innerHTML = sorted.map(([name, pt], index) => {
+                const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🔹";
+                return `<span>${medal} ${name}: <b>${pt}pt</b> </span>`;
+            }).join(' | ') || "データなし";
+        }
+    </script>
+</body>
+</html>
